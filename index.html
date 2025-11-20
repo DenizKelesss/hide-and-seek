@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Hide & Seek - Pro Edition</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #050505; color: white; user-select: none; }
+        
+        canvas { position: absolute; top: 0; left: 0; z-index: 0; }
+
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: flex; flex-direction: column; justify-content: space-between; z-index: 10; }
+        
+        /* Mute Button - Bottom Left */
+        #audio-controls { position: absolute; bottom: 30px; left: 30px; z-index: 3000; pointer-events: auto; }
+        #mute-btn { background: rgba(0,0,0,0.8); border: 1px solid #ff3333; color: #ff3333; font-size: 1.5rem; width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s; box-shadow: 0 0 10px rgba(255, 51, 51, 0.3); }
+        #mute-btn:hover { background: #ff3333; color: #000; box-shadow: 0 0 20px rgba(255, 51, 51, 0.6); }
+
+        /* Menu Screens */
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(5, 5, 10, 0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: auto; z-index: 200; transition: opacity 0.3s; backdrop-filter: blur(5px); }
+        .hidden { opacity: 0; pointer-events: none; visibility: hidden; }
+        
+        h1 { font-size: 5rem; margin-bottom: 0.5rem; color: #ff3333; text-shadow: 0 0 40px rgba(255, 50, 50, 0.8); letter-spacing: 5px; font-weight: 900; text-transform: uppercase; text-align: center; }
+        h2 { font-size: 1.5rem; color: #888; margin-bottom: 2rem; font-weight: 300; letter-spacing: 2px; }
+        
+        /* Settings Panel */
+        .settings-panel { background: rgba(255,255,255,0.03); padding: 30px; border-radius: 0; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 40px; display: flex; gap: 40px; box-shadow: 0 0 20px rgba(0,0,0,0.5); align-items: flex-start; }
+        .setting-group { display: flex; flex-direction: column; align-items: center; }
+        .setting-label { color: #666; font-size: 0.8rem; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; }
+        .number-control { display: flex; align-items: center; gap: 15px; background: rgba(0,0,0,0.5); padding: 8px 20px; border-radius: 4px; border: 1px solid #333; }
+        .control-btn { background: none; border: none; color: #ff3333; font-size: 1.5rem; font-weight: bold; cursor: pointer; padding: 0 10px; transition: color 0.2s; }
+        .control-btn:hover { color: #fff; text-shadow: 0 0 10px #fff; }
+        .val-display { font-size: 1.2rem; font-weight: bold; min-width: 30px; text-align: center; font-family: 'Courier New', monospace; color: #ddd; }
+        .text-val { min-width: 100px; }
+        
+        /* Name Input */
+        .name-input { background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px 15px; color: #fff; font-size: 1.2rem; border-radius: 4px; text-align: center; font-weight: bold; width: 150px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+        .name-input:focus { border-color: #ff3333; }
+        
+        /* Toggle Switch Style for Role */
+        .role-toggle { display: flex; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; border: 1px solid #333; cursor: pointer; }
+        .role-opt { padding: 10px 20px; font-weight: bold; font-size: 1rem; color: #555; transition: 0.2s; }
+        .role-opt.active { background: #ff3333; color: #000; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
+
+        button { background: #ff3333; color: #000; border: none; padding: 15px 60px; font-size: 1.2rem; font-weight: 900; cursor: pointer; margin: 10px; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 51, 0.4); text-transform: uppercase; letter-spacing: 2px; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); }
+        button:hover { background: #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); transform: translateY(-2px); }
+        button:active { transform: scale(0.98); }
+        button.secondary { background: #333; color: #888; box-shadow: none; border: 1px solid #444; }
+        button.secondary:hover { background: #444; color: #fff; border-color: #fff; }
+        
+        /* Pause & Score Menu */
+        #pause-menu, #score-screen { background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 600; }
+        
+        /* Score Table */
+        #score-table { width: 80%; max-width: 800px; border-collapse: collapse; margin-bottom: 30px; color: #fff; font-family: 'Courier New', monospace; }
+        #score-table th { text-align: left; border-bottom: 2px solid #ff3333; padding: 15px; color: #ff3333; font-size: 1.2rem; text-transform: uppercase; }
+        #score-table td { padding: 15px; border-bottom: 1px solid #333; font-size: 1.1rem; }
+        #score-table tr:last-child td { border-bottom: none; }
+        .role-badge { padding: 3px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold; text-transform: uppercase; }
+        .badge-seeker { background: #ff3333; color: #000; }
+        .badge-hider { background: #4ade80; color: #000; }
+        
+        /* Score Back Button Position */
+        #score-back-btn { position: absolute; bottom: 50px; right: 50px; }
+        
+        /* HUD - Fixed to Top */
+        #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 40px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 2px 4px black; pointer-events: none; }
+        .stat-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-left: 3px solid #ff3333; margin-left: 20px; backdrop-filter: blur(4px); transform: skewX(-15deg); }
+        .stat-content { transform: skewX(15deg); }
+        .stat-label { font-size: 0.7rem; color: #666; letter-spacing: 2px; margin-bottom: 2px; font-weight: 900; }
+        #role-display { font-size: 2.5rem; font-weight: 900; color: #fbbf24; text-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
+        #timer-display { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; line-height: 0.9; color: #fff; }
+        #hider-count-display { font-size: 3rem; font-weight: 900; font-family: 'Courier New', monospace; color: #ff3333; line-height: 0.9; }
+        
+        #msg-area { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 4rem; font-weight: 900; color: #fff; text-shadow: 0 0 30px rgba(255,0,0,0.8); transition: opacity 0.5s; letter-spacing: 5px; text-transform: uppercase; pointer-events: none; z-index: 50; }
+        
+        /* Commentary Feed */
+        #comms-feed { position: absolute; top: 150px; left: 20px; width: 350px; max-height: 300px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
+        .comm-msg { background: rgba(0,0,0,0.6); border-left: 2px solid #ff3333; color: #ddd; padding: 8px 12px; margin-top: 8px; font-size: 0.9rem; font-family: 'Courier New', monospace; animation: slideIn 0.3s ease-out; text-shadow: 1px 1px 0 #000; }
+        .comm-name { color: #fbbf24; font-weight: bold; margin-right: 5px; }
+        .comm-system { border-left-color: #3b82f6; color: #fff; font-style: italic; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
+        /* Crosshair */
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #ff3333; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px #ff3333; }
+        #crosshair::after { content: ''; position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); width: 20px; height: 20px; top: -9px; left: -9px; border-radius: 50%; }
+
+        #blindfold { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 50; display: flex; align-items: center; justify-content: center; color: #ff3333; font-size: 4rem; flex-direction: column; font-weight: 900; letter-spacing: 5px; }
+        
+        #lobby-list { margin-top: 20px; max-height: 200px; overflow-y: auto; width: 350px; background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px; }
+        .lobby-item { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; transition: background 0.2s; }
+        .lobby-item:hover { background: rgba(255,51,51,0.1); color: #ff3333; }
+    </style>
+    
+    <script type="importmap">
+        { "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.146.0/build/three.module.js" } }
+    </script>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="screen" style="z-index: 500; background: #000;">
+        <h1>LOADING...</h1>
+        <p>Connecting to Game Services</p>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="start-screen" class="screen hidden" style="z-index: 400; background: #000; cursor: pointer;">
+        <div class="start-btn-text" style="font-size: 4rem; font-weight: 900; color: #fff; animation: pulse 2s infinite; letter-spacing: 5px;">CLICK TO START</div>
+        <p style="color: #666; margin-top: 20px; letter-spacing: 2px;">ENABLE AUDIO & GRAPHICS</p>
+    </div>
+    <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 50px rgba(255, 50, 50, 1); } 100% { transform: scale(1); opacity: 0.8; } }</style>
+    
+    <!-- Main Menu -->
+    <div id="main-menu" class="screen hidden">
+        <h1>HIDE & SEEK 3D</h1>
+        <h2>Pro Edition</h2>
+        
+        <div class="settings-panel">
+            <div class="setting-group">
+                <span class="setting-label">Your Name</span>
+                <input type="text" id="player-name-input" class="name-input" value="Player" onclick="event.stopPropagation()" maxlength="10">
+            </div>
+
+            <div class="setting-group">
+                <span class="setting-label">Play As</span>
+                <div class="role-toggle" onclick="event.stopPropagation(); toggleUserRole()">
+                    <div id="role-opt-hider" class="role-opt active">HIDER</div>
+                    <div id="role-opt-seeker" class="role-opt">SEEKER</div>
+                </div>
+            </div>
+            <div class="setting-group">
+                <span class="setting-label">Map</span>
+                <div class="number-control">
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('map', -1)">‹</button>
+                    <span class="val-display text-val" id="cfg-map">Urban</span>
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('map', 1)">›</button>
+                </div>
+            </div>
+            <div class="setting-group">
+                <span class="setting-label">Total Hiders</span>
+                <div class="number-control">
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('hiders', -1)">-</button>
+                    <span class="val-display" id="cfg-hiders">5</span>
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('hiders', 1)">+</button>
+                </div>
+            </div>
+            <div class="setting-group">
+                <span class="setting-label">Total Seekers</span>
+                <div class="number-control">
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('seekers', -1)">-</button>
+                    <span class="val-display" id="cfg-seekers">1</span>
+                    <button class="control-btn" onclick="event.stopPropagation(); updateConfig('seekers', 1)">+</button>
+                </div>
+            </div>
+        </div>
+
+        <button onclick="event.stopPropagation(); selectMode('single')">SINGLE PLAYER (vs AI)</button>
+        <button onclick="event.stopPropagation(); selectMode('multi')">MULTIPLAYER</button>
+        <p style="margin-top: 50px; opacity: 0.5;">WASD to Move | SHIFT to Run | SPACE to Jump | P to Pause</p>
+    </div>
+
+    <!-- Pause Menu -->
+    <div id="pause-menu" class="screen hidden">
+        <h1>PAUSED</h1>
+        <button onclick="event.stopPropagation(); togglePause()">RESUME GAME</button>
+        <button class="secondary" onclick="event.stopPropagation(); quitGame()">QUIT TO MAIN MENU</button>
+    </div>
+
+    <!-- Score Screen -->
+    <div id="score-screen" class="screen hidden">
+        <h1>MATCH RESULTS</h1>
+        <h2 id="match-result-title" style="color: #fff; margin-top: 0;"></h2>
+        
+        <table id="score-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Captures</th>
+                    <th>Survival Time</th>
+                </tr>
+            </thead>
+            <tbody id="score-body">
+                <!-- Rows generated by JS -->
+            </tbody>
+        </table>
+
+        <button id="score-back-btn" onclick="event.stopPropagation(); quitGame()">BACK TO MENU</button>
+    </div>
+
+    <!-- Multiplayer Menu -->
+    <div id="multi-menu" class="screen hidden">
+        <h1>MULTIPLAYER</h1>
+        <div style="display: flex; gap: 20px;">
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                <h3>Create Room</h3>
+                <button onclick="event.stopPropagation(); createRoom()">HOST NEW GAME</button>
+            </div>
+            <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px;">
+                <h3>Join Room</h3>
+                <button class="secondary" onclick="event.stopPropagation(); refreshLobbyList()">Refresh List</button>
+                <div id="lobby-list"></div>
+            </div>
+        </div>
+        <button class="secondary" onclick="event.stopPropagation(); backToMain()" style="margin-top: 30px;">BACK</button>
+    </div>
+    
+    <!-- Lobby Screen -->
+    <div id="lobby-screen" class="screen hidden">
+        <h1>LOBBY</h1>
+        <h2>Room Code: <span id="room-code-display" style="color: #4ade80; font-family: monospace;">...</span></h2>
+        <p>Waiting for players...</p>
+        <button onclick="event.stopPropagation(); startMultiBtn()">START GAME</button>
+        <button class="secondary" onclick="event.stopPropagation(); backToMain()">LEAVE</button>
+    </div>
+    
+    <!-- UI Layer -->
+    <div id="ui-layer">
+        <div id="hud" style="opacity: 0; transition: opacity 1s;">
+            <div style="display:flex">
+                <div class="stat-box">
+                    <div class="stat-content">
+                        <div class="stat-label">ROLE</div>
+                        <div id="role-display">HIDER</div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-content">
+                        <div class="stat-label">HIDERS LEFT</div>
+                        <div id="hider-count-display">3</div>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-box" style="border-left-color: #fbbf24;">
+                <div class="stat-content">
+                    <div class="stat-label">TIME</div>
+                    <div id="timer-display">60</div>
+                </div>
+            </div>
+        </div>
+        <div id="msg-area" style="opacity: 0;">GAME MESSAGE</div>
+    </div>
+    
+    <!-- Mute Button Bottom Left -->
+    <div id="audio-controls">
+         <button id="mute-btn" onclick="event.stopPropagation(); toggleMute()">🔊</button>
+    </div>
+
+    <div id="crosshair"></div>
+    <div id="blindfold" class="hidden">
+        <div id="blind-text">YOU ARE THE SEEKER</div>
+        <div style="font-size: 1.5rem; margin-top: 20px; color: #aaa;">Wait for hiders...</div>
+    </div>
+
+    <!-- Game Script -->
+    <script type="module">
+        import * as THREE from 'three';
+        import { PointerLockControls } from 'https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/controls/PointerLockControls.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 1. Use your config here!
+        const firebaseConfig = {
+          apiKey: "AIzaSyDrh86f3IlF6dAGTRhthWLgZYCtiwJ3xPU",
+          authDomain: "hide-and-seek-3d-game.firebaseapp.com",
+          projectId: "hide-and-seek-3d-game",
+          storageBucket: "hide-and-seek-3d-game.firebasestorage.app",
+          messagingSenderId: "477428508794",
+          appId: "1:477428508794:web:72b60855cb1585057773c3",
+          measurementId: "G-KZRH7LMWX5"
+        };
+        
+        // 2. Initialize App
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = "hide-and-seek-pro"; // Static app identifier
+        
+        // 3. AI API Key (Optional)
+        const apiKey = ""; 
+
+        // --- Globals ---
+        let currentUser = null;
+        let currentRoomId = null;
+        let isHost = false;
+        let unsubscribeRoom = null;
+        // New Global for offline mode
+        let isOffline = false;
+        
+        const players = {}; 
+        let collidables = []; 
+        let pointsOfInterest = []; 
+        const seekerSpawns = [];
+        let controls;
+        let gameActive = false;
+        let isPaused = false;
+        let gameMode = 'single'; 
+        let myRole = 'hider'; 
+        let selectedRole = 'hider'; 
+        let gamePhase = 'waiting'; 
+        let timeLeft = 60;
+        let hidingTime = 15; 
+        let hidersRemaining = 0;
+        let cfgHiders = 5;
+        let cfgSeekers = 1;
+        let cfgMap = 'Urban'; 
+        let myPlayerName = "Player";
+        
+        const gameStats = {}; 
+        
+        const botNames = ["Alex", "Jordan", "Casey", "Taylor", "Morgan", "Riley", "Jamie", "Quinn", "Avery", "Dakota", "Reese", "Skyler", "Parker", "Sydney", "Charlie", "Peyton"];
+        
+        // Physics Config
+        const moveSpeed = 5.0; 
+        const sprintSpeed = 9.0; 
+        const velocity = new THREE.Vector3();
+        const moveDirection = new THREE.Vector3(); 
+        const keys = { w: false, a: false, s: false, d: false, shift: false, space: false };
+        let canJump = false;
+        let prevTime = performance.now();
+        const tempBox = new THREE.Box3();
+        const playerRadius = 0.6; 
+
+        // Audio
+        let audioCtx;
+        let masterGain;
+        let isMuted = false;
+        let droneOsc1, droneOsc2, lfoOsc;
+
+        // DOM Elements
+        const hud = document.getElementById('hud');
+        const roleDisplay = document.getElementById('role-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const hiderCountDisplay = document.getElementById('hider-count-display');
+        const msgArea = document.getElementById('msg-area');
+        const blindfold = document.getElementById('blindfold');
+        const pauseMenu = document.getElementById('pause-menu');
+        const commsFeed = document.getElementById('comms-feed');
+        
+        // --- AI Class ---
+        class AIPlayer {
+            constructor(id, role, startPos) {
+                this.id = id; // Name is ID
+                this.role = role;
+                this.speed = role === 'seeker' ? 18 : 12; 
+                this.state = 'idle';
+                this.targetPos = new THREE.Vector3();
+                this.lastPos = new THREE.Vector3();
+                this.stuckTime = 0;
+                
+                const group = new THREE.Group();
+                const geo = new THREE.CapsuleGeometry(1, 3, 4, 8);
+                const color = role === 'seeker' ? 0x330000 : 0x003300;
+                const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.3 });
+                const body = new THREE.Mesh(geo, mat); body.castShadow = true; group.add(body);
+                
+                const eyeGeo = new THREE.SphereGeometry(0.3, 16, 16);
+                const eyeColor = role === 'seeker' ? 0xff0000 : 0x00ff00; 
+                const eyeMat = new THREE.MeshBasicMaterial({ color: eyeColor });
+                
+                if (role === 'seeker') {
+                    const visorGeo = new THREE.BoxGeometry(1.2, 0.4, 0.5);
+                    const visor = new THREE.Mesh(visorGeo, eyeMat);
+                    visor.position.set(0, 0.5, 0.8); group.add(visor);
+                } else {
+                    const eye = new THREE.Mesh(eyeGeo, eyeMat);
+                    eye.position.set(0, 0.5, 0.85); group.add(eye);
+                }
+                group.position.copy(startPos);
+                this.mesh = group; scene.add(this.mesh);
+                this.chooseNewTarget();
+            }
+            
+            chooseNewTarget() {
+                if (this.role === 'seeker' && gamePhase === 'seeking') {
+                    this.state = 'search';
+                    if (pointsOfInterest.length > 0) {
+                        const poi = pointsOfInterest[Math.floor(Math.random() * pointsOfInterest.length)];
+                        this.targetPos.copy(poi);
+                        this.targetPos.x += (Math.random() - 0.5) * 15;
+                        this.targetPos.z += (Math.random() - 0.5) * 15;
+                    } else this.pickRandomLoc();
+                } else if (this.role === 'hider') {
+                    this.state = 'wander'; this.pickRandomLoc();
+                } else this.state = 'idle';
+            }
+
+            pickRandomLoc() {
+                 this.targetPos.set((Math.random() - 0.5) * 180, 2, (Math.random() - 0.5) * 180);
+            }
+            
+            update(dt) {
+                if (!gameActive || isPaused) return;
+                const myPos = this.mesh.position;
+                const playerPos = controls.getObject().position;
+                
+                if (this.state !== 'idle') this.mesh.lookAt(this.targetPos.x, this.mesh.position.y, this.targetPos.z);
+                if (myPos.distanceTo(this.lastPos) < 0.1) {
+                    this.stuckTime += dt;
+                    if (this.stuckTime > 1.0) {
+                        this.mesh.position.y += 4; this.pickRandomLoc(); this.stuckTime = 0;
+                    }
+                } else this.stuckTime = 0;
+                this.lastPos.copy(myPos);
+
+                if (this.role === 'seeker') {
+                    if (gamePhase === 'hiding') return;
+                    let target = null; let closestDist = 1000; 
+                    if (myRole === 'hider') {
+                        const d = myPos.distanceTo(playerPos);
+                        if (d < 50 && d < closestDist) { target = playerPos; closestDist = d; }
+                    }
+                    for (const id in players) {
+                        if (id === this.id) continue; const p = players[id];
+                        if (p.role === 'hider' && p.mesh) {
+                            const d = myPos.distanceTo(p.mesh.position);
+                            if (d < 50 && d < closestDist) {
+                                target = p.mesh.position; closestDist = d;
+                                if (d < 3.5) { 
+                                    window.catchHider(id, this.id); 
+                                    return; 
+                                }
+                            }
+                        }
+                    }
+                    if (target) {
+                        this.state = 'chase'; this.targetPos.copy(target);
+                        if (myRole === 'hider' && closestDist < 2.5) endGame(`${this.id} caught YOU!`);
+                    } else if (this.state === 'chase') {
+                        this.state = 'search'; this.chooseNewTarget();
+                    }
+                    if (this.state === 'search' && myPos.distanceTo(this.targetPos) < 3) this.chooseNewTarget();
+
+                } else { 
+                    let dangerPos = null; let closestDanger = 999;
+                    if (myRole === 'seeker') {
+                        const d = myPos.distanceTo(playerPos);
+                        if (d < 35) { dangerPos = playerPos; closestDanger = d; }
+                    }
+                    for (const id in players) {
+                        if (id === this.id) continue; const p = players[id];
+                        if (p.role === 'seeker' && p.mesh) {
+                            const d = myPos.distanceTo(p.mesh.position);
+                             if (d < 35 && d < closestDanger) { dangerPos = p.mesh.position; closestDanger = d; }
+                        }
+                    }
+                    if (dangerPos) {
+                        this.state = 'flee';
+                        const fleeDir = new THREE.Vector3().subVectors(myPos, dangerPos).normalize();
+                        this.targetPos.copy(myPos).add(fleeDir.multiplyScalar(20));
+                    } else {
+                        if (this.state === 'flee') this.state = 'idle';
+                        if (this.state === 'idle' && Math.random() < 0.01) this.chooseNewTarget();
+                        if (this.state === 'wander' && myPos.distanceTo(this.targetPos) < 2) this.state = 'idle';
+                    }
+                }
+                
+                if (this.state !== 'idle') {
+                    const direction = new THREE.Vector3().subVectors(this.targetPos, myPos).normalize();
+                    const ray = new THREE.Raycaster(myPos, direction, 0, 4);
+                    const hits = ray.intersectObjects(collidables);
+                    if (hits.length > 0) direction.applyAxisAngle(new THREE.Vector3(0,1,0), Math.PI/2);
+                    this.mesh.position.add(direction.multiplyScalar(this.speed * dt));
+                }
+                
+                if (this.mesh.position.y > 2.5) this.mesh.position.y -= 15 * dt;
+                this.mesh.position.y = Math.max(2.5, this.mesh.position.y);
+                this.mesh.position.x = Math.max(-95, Math.min(95, this.mesh.position.x));
+                this.mesh.position.z = Math.max(-95, Math.min(95, this.mesh.position.z));
+            }
+        }
+
+        function spawnAI(id, role, startPos) {
+            players[id] = new AIPlayer(id, role, startPos);
+            gameStats[id] = { name: id, role: role, catches: 0, survival: 0, caught: false };
+        }
+
+        // --- Auth ---
+        async function initAuth() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (e) {
+                console.warn("Authentication failed, switching to Offline Mode:", e);
+                isOffline = true;
+                updateMenuVisibility();
+            }
+        }
+        initAuth();
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                updateMenuVisibility();
+            }
+        });
+
+        function updateMenuVisibility() {
+            const load = document.getElementById('loading-screen');
+            const start = document.getElementById('start-screen'); 
+            if(load) load.classList.add('hidden');
+            if(start) start.classList.remove('hidden');
+        }
+        // Backup timeout in case auth hangs
+        setTimeout(updateMenuVisibility, 2000);
+
+        const startScreen = document.getElementById('start-screen');
+        if(startScreen) {
+            startScreen.addEventListener('click', () => {
+                startScreen.classList.add('hidden');
+                document.getElementById('main-menu').classList.remove('hidden');
+                if(!audioCtx) initAudio();
+                window.playClick();
+            });
+        }
+
+        // --- Three.js Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020205);
+        scene.fog = new THREE.FogExp2(0x020205, 0.025); 
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.outputEncoding = THREE.sRGBEncoding;
+        
+        function init() {
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            document.body.appendChild(renderer.domElement);
+            
+            // Menu Cam
+            camera.position.set(0, 60, 90);
+            camera.lookAt(0, 0, 0);
+            
+            const hemiLight = new THREE.HemisphereLight(0x444455, 0x000000, 0.4);
+            scene.add(hemiLight);
+            
+            const dirLight = new THREE.DirectionalLight(0xffaa88, 0.5);
+            dirLight.position.set(50, 150, 50);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 4096;
+            dirLight.shadow.mapSize.height = 4096;
+            dirLight.shadow.camera.top = 150;
+            dirLight.shadow.camera.bottom = -150;
+            dirLight.shadow.camera.left = -150;
+            dirLight.shadow.camera.right = 150;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+            
+            createEnvironment();
+
+            controls = new PointerLockControls(camera, document.body);
+            
+            controls.addEventListener('unlock', () => {
+                if (gameActive && !isPaused) togglePause();
+            });
+            
+            window.addEventListener('click', () => {
+                 if (!audioCtx) initAudio();
+            }, { once: true }); 
+            
+            const onKeyDown = (e) => {
+                if (e.code === 'KeyP' && gameActive) { togglePause(); return; }
+                switch (e.code) {
+                    case 'ArrowUp': case 'KeyW': keys.w = true; break;
+                    case 'ArrowLeft': case 'KeyA': keys.a = true; break;
+                    case 'ArrowDown': case 'KeyS': keys.s = true; break;
+                    case 'ArrowRight': case 'KeyD': keys.d = true; break;
+                    case 'ShiftLeft': case 'ShiftRight': keys.shift = true; break;
+                    case 'Space': if (canJump && !isPaused) velocity.y += 20; canJump = false; break;
+                }
+            };
+            const onKeyUp = (e) => {
+                switch (e.code) {
+                    case 'ArrowUp': case 'KeyW': keys.w = false; break;
+                    case 'ArrowLeft': case 'KeyA': keys.a = false; break;
+                    case 'ArrowDown': case 'KeyS': keys.s = false; break;
+                    case 'ArrowRight': case 'KeyD': keys.d = false; break;
+                    case 'ShiftLeft': case 'ShiftRight': keys.shift = false; break;
+                }
+            };
+            document.addEventListener('keydown', onKeyDown);
+            document.addEventListener('keyup', onKeyUp);
+            
+            window.addEventListener('resize', onWindowResize);
+            animate();
+            if(isOffline) updateMenuVisibility();
+        }
+
+        function initAudio() {
+            if (audioCtx) return;
+            try {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                audioCtx = new AudioContext();
+                masterGain = audioCtx.createGain();
+                masterGain.gain.value = isMuted ? 0 : 0.2; 
+                masterGain.connect(audioCtx.destination);
+
+                droneOsc1 = audioCtx.createOscillator();
+                droneOsc1.type = 'sawtooth';
+                droneOsc1.frequency.value = 55; 
+                const filter1 = audioCtx.createBiquadFilter();
+                filter1.type = 'lowpass';
+                filter1.frequency.value = 120;
+                filter1.Q.value = 2;
+                droneOsc1.connect(filter1);
+                filter1.connect(masterGain);
+                droneOsc1.start();
+
+                droneOsc2 = audioCtx.createOscillator();
+                droneOsc2.type = 'sine';
+                droneOsc2.frequency.value = 56; 
+                droneOsc2.connect(masterGain);
+                droneOsc2.start();
+                
+                lfoOsc = audioCtx.createOscillator();
+                lfoOsc.type = 'sine';
+                lfoOsc.frequency.value = 0.1; 
+                const lfoGain = audioCtx.createGain();
+                lfoGain.gain.value = 50;
+                lfoOsc.connect(lfoGain);
+                lfoGain.connect(filter1.frequency); 
+                lfoOsc.start();
+            } catch(e) { console.log("Audio error:", e); }
+        }
+        
+        window.setGameAudioMode = () => {
+            if (!audioCtx) return;
+            const now = audioCtx.currentTime;
+            if(droneOsc1) droneOsc1.frequency.exponentialRampToValueAtTime(41, now + 2); 
+            if(droneOsc2) droneOsc2.frequency.exponentialRampToValueAtTime(42, now + 2);
+            if(lfoOsc) lfoOsc.frequency.exponentialRampToValueAtTime(0.5, now + 2); 
+        };
+
+        window.toggleMute = function() {
+            if(!audioCtx) initAudio();
+            isMuted = !isMuted;
+            const btn = document.getElementById('mute-btn');
+            window.playClick();
+            if (isMuted) {
+                btn.innerHTML = '🔇'; 
+                if(masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
+            } else {
+                btn.innerHTML = '🔊'; 
+                if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+                if(masterGain) masterGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.1);
+            }
+        };
+        
+        window.playClick = function() {
+            if (!audioCtx || isMuted) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.1);
+        };
+
+        function clearEnvironment() {
+            for(let i = scene.children.length - 1; i >= 0; i--) {
+                const obj = scene.children[i];
+                if(obj.type === 'Mesh') {
+                     let isPlayer = false;
+                     Object.values(players).forEach(p => { if(p.mesh === obj || (p.mesh && p.mesh.children && p.mesh.children.includes(obj))) isPlayer = true; });
+                     let isPlayerGroup = false;
+                     Object.values(players).forEach(p => { if(p.mesh === obj) isPlayerGroup = true; });
+                     if(!isPlayer && !isPlayerGroup) scene.remove(obj);
+                }
+            }
+            collidables = [];
+            pointsOfInterest = [];
+            seekerSpawns.length = 0; 
+        }
+
+        function createEnvironment() {
+            clearEnvironment();
+
+            const gridTexture = createGridTexture();
+            gridTexture.wrapS = THREE.RepeatWrapping;
+            gridTexture.wrapT = THREE.RepeatWrapping;
+            gridTexture.repeat.set(50, 50);
+            const floorGeo = new THREE.PlaneGeometry(300, 300);
+            const floorMat = new THREE.MeshStandardMaterial({ map: gridTexture, color: 0x333333, roughness: 0.6, metalness: 0.4 });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            createStadiumStands();
+            
+            createWall(0, 15, -100, 200, 30, 4);
+            createWall(0, 15, 100, 200, 30, 4);
+            createWall(-100, 15, 0, 4, 30, 200);
+            createWall(100, 15, 0, 4, 30, 200);
+
+            if (cfgMap === 'Urban') generateUrbanMap();
+            else if (cfgMap === 'Maze') generateMazeMap();
+            else if (cfgMap === 'Forest') generateForestMap();
+            
+            seekerSpawns.push(new THREE.Vector3(25, 3, 25)); 
+            seekerSpawns.push(new THREE.Vector3(40, 3, 40)); 
+            seekerSpawns.push(new THREE.Vector3(-40, 3, -40)); 
+            seekerSpawns.push(new THREE.Vector3(40, 3, -40)); 
+            seekerSpawns.push(new THREE.Vector3(-40, 3, 40)); 
+        }
+        
+        function createStadiumStands() {
+            const tierCount = 6;
+            const tierHeight = 8;
+            const tierDepth = 10;
+            const startHeight = 30;
+            const standMat = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0x110000, emissiveIntensity: 0.2, roughness: 0.9 });
+            const lightGeo = new THREE.PlaneGeometry(1,1);
+            const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            for(let i=0; i<tierCount; i++) {
+                const size = 220 + (i * tierDepth * 2);
+                const y = startHeight + (i * tierHeight);
+                const top = new THREE.Mesh(new THREE.BoxGeometry(size, tierHeight, tierDepth), standMat);
+                top.position.set(0, y, -(110 + (i*tierDepth))); scene.add(top);
+                const bot = new THREE.Mesh(new THREE.BoxGeometry(size, tierHeight, tierDepth), standMat);
+                bot.position.set(0, y, (110 + (i*tierDepth))); scene.add(bot);
+                const left = new THREE.Mesh(new THREE.BoxGeometry(tierDepth, tierHeight, size + (tierDepth*2)), standMat);
+                left.position.set(-(110 + (i*tierDepth)), y, 0); scene.add(left);
+                const right = new THREE.Mesh(new THREE.BoxGeometry(tierDepth, tierHeight, size + (tierDepth*2)), standMat);
+                right.position.set((110 + (i*tierDepth)), y, 0); scene.add(right);
+                for(let k=0; k<5; k++) {
+                    const light = new THREE.Mesh(lightGeo, lightMat);
+                    light.position.set((Math.random()-0.5)*size, y, -(109 + (i*tierDepth)));
+                    light.rotation.x = Math.PI/2; scene.add(light);
+                }
+            }
+        }
+
+        function generateUrbanMap() {
+            for(let i=0; i<45; i++) {
+                const w = 5 + Math.random() * 10;
+                const h = 6 + Math.random() * 15;
+                const d = 5 + Math.random() * 10;
+                const x = (Math.random() - 0.5) * 170;
+                const z = (Math.random() - 0.5) * 170;
+                if (Math.abs(x) < 15 && Math.abs(z) < 15) continue; 
+                const color = new THREE.Color().setHSL(0, 0, 0.2 + Math.random() * 0.2);
+                createCube(x, h/2, z, w, h, d, color);
+                addPOI(x+w, 2, z); addPOI(x-w, 2, z);
+            }
+            createCube(0, 10, 0, 10, 20, 10, 0x111111);
+            const glow = new THREE.PointLight(0xff0000, 1, 50);
+            glow.position.set(0, 22, 0);
+            scene.add(glow);
+        }
+        
+        function generateMazeMap() {
+            const cols = 10; const rows = 10; const cellSize = 20;
+            const grid = [];
+            for(let r=0; r<rows; r++) {
+                const row = [];
+                for(let c=0; c<cols; c++) row.push({ r, c, visited: false, walls: [true, true, true, true] }); 
+                grid.push(row);
+            }
+            const stack = [];
+            let current = grid[0][0];
+            current.visited = true;
+            function getUnvisitedNeighbors(cell) {
+                const neighbors = []; const {r, c} = cell;
+                if (r > 0 && !grid[r-1][c].visited) neighbors.push(grid[r-1][c]); 
+                if (c < cols-1 && !grid[r][c+1].visited) neighbors.push(grid[r][c+1]); 
+                if (r < rows-1 && !grid[r+1][c].visited) neighbors.push(grid[r+1][c]); 
+                if (c > 0 && !grid[r][c-1].visited) neighbors.push(grid[r][c-1]); 
+                return neighbors;
+            }
+            do {
+                const neighbors = getUnvisitedNeighbors(current);
+                if (neighbors.length > 0) {
+                    const next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    stack.push(current);
+                    if (current.r - next.r === 1) { current.walls[0] = false; next.walls[2] = false; } 
+                    else if (current.c - next.c === -1) { current.walls[1] = false; next.walls[3] = false; } 
+                    else if (current.r - next.r === -1) { current.walls[2] = false; next.walls[0] = false; } 
+                    else if (current.c - next.c === 1) { current.walls[3] = false; next.walls[1] = false; } 
+                    current = next; current.visited = true;
+                } else if (stack.length > 0) current = stack.pop();
+            } while (stack.length > 0);
+            
+            for(let r=0; r<rows; r++) for(let c=0; c<cols; c++) if (Math.random() < 0.15) grid[r][c].walls[Math.floor(Math.random()*4)] = false;
+
+            const wallH = 10; const wallThick = 2; const offset = -90; 
+            for(let r=0; r<rows; r++) {
+                for(let c=0; c<cols; c++) {
+                    const cx = (c * cellSize) + offset; const cz = (r * cellSize) + offset; const cell = grid[r][c];
+                    if (cell.walls[0]) createWall(cx, wallH/2, cz - cellSize/2, cellSize + wallThick, wallH, wallThick);
+                    if (cell.walls[3]) createWall(cx - cellSize/2, wallH/2, cz, wallThick, wallH, cellSize + wallThick);
+                    if (c === cols - 1 && cell.walls[1]) createWall(cx + cellSize/2, wallH/2, cz, wallThick, wallH, cellSize + wallThick);
+                    if (r === rows - 1 && cell.walls[2]) createWall(cx, wallH/2, cz + cellSize/2, cellSize + wallThick, wallH, wallThick);
+                    addPOI(cx, 2, cz);
+                }
+            }
+        }
+        
+        function generateForestMap() {
+            for(let i=0; i<120; i++) {
+                const r = 1 + Math.random() * 2; const h = 10 + Math.random() * 15;
+                const x = (Math.random() - 0.5) * 180; const z = (Math.random() - 0.5) * 180;
+                 if (Math.abs(x) < 10 && Math.abs(z) < 10) continue;
+                 const color = new THREE.Color(0x1a2b1a); 
+                 createCube(x, h/2, z, r, h, r, color); 
+                 createCube(x, h, z, r*4, 2, r*4, new THREE.Color(0x0d1a0d), false); // Leaves not collidable
+                 if(i % 3 === 0) createCube(x + 5, 1, z + 5, 4, 2, 4, 0x222222);
+                 addPOI(x, 2, z);
+            }
+        }
+
+        function createGridTexture() {
+            const canvas = document.createElement('canvas'); canvas.width = 512; canvas.height = 512;
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#111'; context.fillRect(0, 0, 512, 512);
+            context.strokeStyle = '#330000'; context.lineWidth = 4; context.strokeRect(0,0,512,512);
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        function addPOI(x, y, z) { pointsOfInterest.push(new THREE.Vector3(x, y, z)); }
+        
+        function createWall(x, y, z, w, h, d, collidable = true) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.2 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            scene.add(mesh);
+            if(collidable) {
+                collidables.push(mesh); 
+                mesh.updateMatrixWorld();
+                mesh.bbox = new THREE.Box3().setFromObject(mesh);
+            }
+        }
+
+        function createCube(x, y, z, w, h, d, color, collidable = true) {
+            const geo = new THREE.BoxGeometry(w, h, d);
+            const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.1 });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(x, y, z);
+            mesh.castShadow = true; mesh.receiveShadow = true;
+            scene.add(mesh);
+            if(collidable) {
+                collidables.push(mesh);
+                mesh.updateMatrixWorld();
+                mesh.bbox = new THREE.Box3().setFromObject(mesh);
+            }
+        }
+
+        function startGame(mode, role = 'hider') {
+            window.playClick();
+            window.setGameAudioMode();
+            createEnvironment();
+            
+            const nameInput = document.getElementById('player-name-input');
+            if(nameInput && nameInput.value.trim() !== "") {
+                myPlayerName = nameInput.value.trim();
+            }
+            
+            // Initialize Local Player Stats
+            Object.keys(gameStats).forEach(k => delete gameStats[k]); // Clear old
+            gameStats["player"] = { 
+                name: myPlayerName, 
+                role: selectedRole, 
+                catches: 0, 
+                survival: 0, 
+                caught: false 
+            };
+
+            gameMode = mode; 
+            myRole = selectedRole; 
+            gameActive = true;
+            isPaused = false;
+            gamePhase = 'hiding'; timeLeft = hidingTime;
+            velocity.set(0,0,0);
+            
+            let spawnPos = new THREE.Vector3(0, 2, 0);
+            if (cfgMap === 'Maze') { spawnPos.set((Math.random()-0.5)*180, 2, (Math.random()-0.5)*180); } 
+            else {
+                if (myRole === 'seeker') { spawnPos.copy(seekerSpawns[0]); spawnPos.y = 3; } 
+                else { spawnPos.set((Math.random()-0.5)*100, 2, (Math.random()-0.5)*100); }
+            }
+            controls.getObject().position.copy(spawnPos); 
+            setTimeout(() => { controls.lock(); }, 100);
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('score-screen').classList.add('hidden');
+            hud.style.opacity = 1;
+            Object.values(players).forEach(p => scene.remove(p.mesh));
+            for (let id in players) delete players[id];
+            
+            if (mode === 'single') {
+                if (myRole === 'hider' && cfgSeekers < 1) cfgSeekers = 1;
+                if (myRole === 'seeker' && cfgHiders < 1) cfgHiders = 1;
+                let botSeekers = cfgSeekers; 
+                let botHiders = cfgHiders;
+                if (myRole === 'seeker') botSeekers = Math.max(0, cfgSeekers - 1);
+                else botHiders = Math.max(0, cfgHiders - 1);
+                
+                let availableNames = [...botNames].sort(() => 0.5 - Math.random());
+                for (let i = 0; i < botSeekers; i++) {
+                    const spawnIndex = (i + 1) % seekerSpawns.length;
+                    const pos = seekerSpawns[spawnIndex].clone();
+                    let name = availableNames.pop() || `Seeker ${i+1}`;
+                    spawnAI(name, 'seeker', pos);
+                }
+                for (let i = 0; i < botHiders; i++) {
+                    const pos = new THREE.Vector3((Math.random()-0.5)*160, 3, (Math.random()-0.5)*160);
+                    let name = availableNames.pop() || `Hider ${i+1}`;
+                    spawnAI(name, 'hider', pos);
+                }
+                hidersRemaining = (myRole === 'hider') ? cfgHiders : botHiders;
+            } else { hidersRemaining = 1; }
+            
+            updateHUD();
+            if (myRole === 'seeker') {
+                blindfold.classList.remove('hidden');
+                document.getElementById('blind-text').innerText = "Hiders are hiding...";
+            } else {
+                blindfold.classList.add('hidden');
+                showMsg("HIDE QUICKLY!");
+            }
+            startTimer();
+        }
+        
+        window.togglePause = function() {
+            if (!gameActive) return;
+            isPaused = !isPaused;
+            const pm = document.getElementById('pause-menu');
+            if (isPaused) { controls.unlock(); pm.classList.remove('hidden'); } 
+            else { controls.lock(); pm.classList.add('hidden'); }
+        };
+        
+        window.quitGame = function() {
+            window.playClick();
+            gameActive = false; isPaused = false;
+            document.getElementById('pause-menu').classList.add('hidden');
+            document.getElementById('score-screen').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            controls.unlock();
+            camera.position.set(0, 60, 90); camera.lookAt(0, 0, 0);
+        };
+
+        function startTimer() {
+            const interval = setInterval(() => {
+                if (!gameActive) { clearInterval(interval); return; }
+                if (isPaused) return; 
+                timeLeft--; updateHUD();
+                if (timeLeft <= 0) {
+                    if (gamePhase === 'hiding') {
+                        gamePhase = 'seeking'; timeLeft = 120; 
+                        blindfold.classList.add('hidden'); showMsg("SEEKER RELEASED!");
+                    } else if (gamePhase === 'seeking') {
+                        endGame('TIME UP!'); clearInterval(interval);
+                    }
+                }
+            }, 1000);
+        }
+
+        function endGame(msg) {
+            gameActive = false; controls.unlock();
+            
+            // Update Survival for all remaining hiders
+            const totalTime = 120;
+            // Hiders still in game survived full time
+            Object.values(gameStats).forEach(stat => {
+                 if(stat.role === 'hider' && !stat.caught) {
+                      stat.survival = totalTime;
+                 }
+            });
+            
+            // Show Score Screen
+            document.getElementById('match-result-title').innerText = msg;
+            const tbody = document.getElementById('score-body');
+            tbody.innerHTML = '';
+            
+            // Convert stats to array and sort (Seekers by catches, Hiders by time)
+            const statsArr = Object.values(gameStats);
+            statsArr.sort((a, b) => {
+                if (a.role === b.role) {
+                    return a.role === 'seeker' ? b.catches - a.catches : b.survival - a.survival;
+                }
+                return a.role === 'seeker' ? -1 : 1; // Seekers first
+            });
+
+            statsArr.forEach(s => {
+                const row = document.createElement('tr');
+                const badgeClass = s.role === 'seeker' ? 'badge-seeker' : 'badge-hider';
+                const catches = s.role === 'seeker' ? s.catches : '-';
+                const time = s.role === 'hider' ? `${s.survival}s` : '-';
+                
+                row.innerHTML = `
+                    <td>${s.name}</td>
+                    <td><span class="role-badge ${badgeClass}">${s.role}</span></td>
+                    <td>${catches}</td>
+                    <td>${time}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('score-screen').classList.remove('hidden');
+        }
+        
+        // catchHider - Called when a catch occurs
+        window.catchHider = function(hiderId, catcherName) {
+            // Update Hider Stats
+            if (gameStats[hiderId]) {
+                gameStats[hiderId].caught = true;
+                gameStats[hiderId].survival = 120 - timeLeft;
+            }
+            
+            // Update Catcher Stats
+            // Need to find catcher ID by name or assume catcherName is valid ID/Name
+            // For bots, ID is Name. For Player, key is "player".
+            let catcherId = null;
+            if (catcherName === myPlayerName) catcherId = "player";
+            else catcherId = catcherName; // For bots id matches name
+            
+            if (gameStats[catcherId]) {
+                gameStats[catcherId].catches++;
+            }
+
+            const msgHTML = `<span style='color:#ff4444'>${catcherName}</span> caught <span style='color:#44ff44'>${hiderId}</span>`;
+            msgArea.innerHTML = msgHTML;
+            msgArea.style.opacity = 1;
+            setTimeout(() => msgArea.style.opacity = 0, 3000);
+            
+            if (players[hiderId]) {
+                const p = players[hiderId]; 
+                if(p.mesh) scene.remove(p.mesh); 
+                delete players[hiderId];
+            }
+            
+            hidersRemaining--; updateHUD();
+            if (hidersRemaining <= 0) endGame("SEEKERS WIN!");
+        }
+        
+        // Catch logic for when Player (Hider) is caught
+        function playerCaught(catcherId) {
+            if (gameStats["player"]) {
+                gameStats["player"].caught = true;
+                gameStats["player"].survival = 120 - timeLeft;
+            }
+            if (gameStats[catcherId]) {
+                gameStats[catcherId].catches++;
+            }
+            endGame(`${catcherId} caught YOU!`);
+        }
+
+        function showMsg(text) {
+            msgArea.innerText = text; msgArea.style.opacity = 1;
+            setTimeout(() => msgArea.style.opacity = 0, 3000);
+        }
+
+        function updateHUD() {
+            roleDisplay.innerText = myRole.toUpperCase();
+            roleDisplay.style.color = myRole === 'seeker' ? '#ef4444' : '#4ade80';
+            timerDisplay.innerText = timeLeft;
+            hiderCountDisplay.innerText = hidersRemaining;
+        }
+
+        // --- Multiplayer System (Simplified) ---
+        async function createRoom() { 
+            if (!currentUser && !isOffline) return;
+            const roomId = Math.random().toString(36).substring(7);
+            if(isOffline) alert("Offline Mode: Multiplayer disabled");
+            else enterLobby(roomId, true);
+        }
+        async function refreshLobbyList() {
+             if(isOffline) { alert("Offline Mode"); return; }
+            const list = document.getElementById('lobby-list');
+            list.innerHTML = 'No active rooms found.';
+        }
+        async function joinRoom(roomId) { enterLobby(roomId, false); }
+        function enterLobby(roomId, hostStatus) {
+            currentRoomId = roomId; isHost = hostStatus;
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.remove('hidden');
+            document.getElementById('room-code-display').innerText = roomId;
+        }
+        function setupRoomListener(roomId) { /* MP */ }
+        function startMultiplayerGame() { startGame('multi', 'hider'); }
+        function updateNetwork() { /* MP */ }
+
+        // --- Main Loop ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // --- Predictive Collision Logic ---
+        function checkCollision(nextPos) {
+            for (const obj of collidables) {
+                if (obj.bbox) {
+                    tempBox.copy(obj.bbox).expandByScalar(playerRadius);
+                    tempBox.min.y = -1000; 
+                    tempBox.max.y = 1000;
+                    if (tempBox.containsPoint(nextPos)) return true;
+                }
+            }
+            return false;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
+            
+            if (controls.isLocked && !isPaused) {
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 10.0 * delta; 
+
+                moveDirection.z = Number(keys.w) - Number(keys.s);
+                moveDirection.x = Number(keys.d) - Number(keys.a);
+                moveDirection.normalize();
+
+                let currentSpeed = keys.shift ? sprintSpeed : moveSpeed;
+                if (myRole === 'seeker') currentSpeed *= 1.5; 
+
+                const camObj = controls.getObject();
+                const camForward = new THREE.Vector3(0, 0, -1).applyQuaternion(camObj.quaternion);
+                camForward.y = 0; camForward.normalize();
+                const camRight = new THREE.Vector3(1, 0, 0).applyQuaternion(camObj.quaternion);
+                camRight.y = 0; camRight.normalize();
+
+                const moveVec = new THREE.Vector3();
+                if (keys.w) moveVec.add(camForward);
+                if (keys.s) moveVec.sub(camForward);
+                if (keys.d) moveVec.add(camRight);
+                if (keys.a) moveVec.sub(camRight);
+                moveVec.normalize();
+
+                if (moveVec.length() > 0) {
+                    velocity.x += moveVec.x * 400 * delta * (currentSpeed/10); 
+                    velocity.z += moveVec.z * 400 * delta * (currentSpeed/10);
+                }
+
+                const currentPos = camObj.position.clone();
+                const intendedX = currentPos.x + velocity.x * delta;
+                const intendedZ = currentPos.z + velocity.z * delta;
+                
+                const testX = new THREE.Vector3(intendedX, currentPos.y, currentPos.z);
+                if (!checkCollision(testX)) {
+                    camObj.position.x = intendedX;
+                } else {
+                    velocity.x = 0; 
+                }
+                
+                const testZ = new THREE.Vector3(camObj.position.x, currentPos.y, intendedZ);
+                if (!checkCollision(testZ)) {
+                    camObj.position.z = intendedZ;
+                } else {
+                    velocity.z = 0; 
+                }
+
+                camObj.position.y += velocity.y * delta;
+                if (camObj.position.y < 2) {
+                    velocity.y = 0;
+                    camObj.position.y = 2;
+                    canJump = true;
+                }
+                
+                const x = camObj.position.x;
+                const z = camObj.position.z;
+                if (x < -98) camObj.position.x = -98;
+                if (x > 98) camObj.position.x = 98;
+                if (z < -98) camObj.position.z = -98;
+                if (z > 98) camObj.position.z = 98;
+                
+                if (myRole === 'seeker' && gamePhase === 'seeking') {
+                     for (const id in players) {
+                         const p = players[id];
+                         if (p.role === 'hider') {
+                             const targetPos = p.mesh ? p.mesh.position : null;
+                             if (targetPos && camObj.position.distanceTo(targetPos) < 3) {
+                                 // Player catches Bot
+                                 window.catchHider(id, myPlayerName);
+                             }
+                         }
+                     }
+                }
+            }
+            
+            if (gameMode === 'single' && !isPaused) {
+                Object.values(players).forEach(p => {
+                    if (p instanceof AIPlayer) p.update(delta);
+                });
+            }
+
+            prevTime = time;
+            renderer.render(scene, camera);
+        }
+        
+        window.updateConfig = (type, val) => {
+            window.playClick();
+            if (type === 'hiders') {
+                cfgHiders += val;
+                if(cfgHiders < 1) cfgHiders = 1;
+                if(cfgHiders > 10) cfgHiders = 10;
+                document.getElementById('cfg-hiders').innerText = cfgHiders;
+            } else if (type === 'seekers') {
+                cfgSeekers += val;
+                if(cfgSeekers < 1) cfgSeekers = 1;
+                if(cfgSeekers > 3) cfgSeekers = 3;
+                document.getElementById('cfg-seekers').innerText = cfgSeekers;
+            } else if (type === 'map') {
+                const maps = ['Urban', 'Maze', 'Forest'];
+                let idx = maps.indexOf(cfgMap);
+                idx += val;
+                if (idx >= maps.length) idx = 0;
+                if (idx < 0) idx = maps.length - 1;
+                cfgMap = maps[idx];
+                document.getElementById('cfg-map').innerText = cfgMap;
+            }
+        };
+        
+        window.toggleUserRole = () => {
+            window.playClick();
+            if (selectedRole === 'hider') {
+                selectedRole = 'seeker';
+                document.getElementById('role-opt-hider').classList.remove('active');
+                document.getElementById('role-opt-seeker').classList.add('active');
+            } else {
+                selectedRole = 'hider';
+                document.getElementById('role-opt-seeker').classList.remove('active');
+                document.getElementById('role-opt-hider').classList.add('active');
+            }
+        };
+
+        window.selectMode = function(mode) {
+            window.playClick();
+            if (mode === 'single') {
+                startGame('single', 'hider'); 
+            } else {
+                refreshLobbyList();
+                document.getElementById('main-menu').classList.add('hidden');
+                document.getElementById('multi-menu').classList.remove('hidden');
+            }
+        };
+        
+        window.backToMain = function() {
+            window.playClick();
+            document.getElementById('multi-menu').classList.add('hidden');
+            document.getElementById('lobby-screen').classList.add('hidden');
+            document.getElementById('score-screen').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
+        };
+        window.startMultiBtn = () => {
+            window.playClick();
+            startMultiplayerGame();
+        }
+        window.refreshLobbyList = refreshLobbyList;
+        window.createRoom = () => {
+            window.playClick();
+            createRoom();
+        }
+        
+        init();
+    </script>
+</body>
+</html>
