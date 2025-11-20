@@ -260,7 +260,8 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 1. Use your config here!
+        // --- DEPLOYMENT CONFIGURATION ---
+        // Paste your Firebase Config here before deploying to GitHub
         const firebaseConfig = {
           apiKey: "AIzaSyDrh86f3IlF6dAGTRhthWLgZYCtiwJ3xPU",
           authDomain: "hide-and-seek-3d-game.firebaseapp.com",
@@ -271,13 +272,16 @@
           measurementId: "G-KZRH7LMWX5"
         };
         
-        // 2. Initialize App
+        // Init Firebase
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-        const appId = "hide-and-seek-pro"; // Static app identifier
         
-        // 3. AI API Key (Optional)
+        // Note: We treat the app as "Online" because we have valid config now.
+        // If you want an offline version, you would need to wrap this in try/catch
+        // but for deployment, this is what you want.
+        
+        const appId = "hide-and-seek-pro"; 
         const apiKey = ""; 
 
         // --- Globals ---
@@ -285,8 +289,6 @@
         let currentRoomId = null;
         let isHost = false;
         let unsubscribeRoom = null;
-        // New Global for offline mode
-        let isOffline = false;
         
         const players = {}; 
         let collidables = []; 
@@ -478,17 +480,7 @@
 
         // --- Auth ---
         async function initAuth() {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
-                }
-            } catch (e) {
-                console.warn("Authentication failed, switching to Offline Mode:", e);
-                isOffline = true;
-                updateMenuVisibility();
-            }
+            await signInAnonymously(auth);
         }
         initAuth();
 
@@ -505,7 +497,6 @@
             if(load) load.classList.add('hidden');
             if(start) start.classList.remove('hidden');
         }
-        // Backup timeout in case auth hangs
         setTimeout(updateMenuVisibility, 2000);
 
         const startScreen = document.getElementById('start-screen');
@@ -590,7 +581,6 @@
             
             window.addEventListener('resize', onWindowResize);
             animate();
-            if(isOffline) updateMenuVisibility();
         }
 
         function initAudio() {
