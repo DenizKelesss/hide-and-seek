@@ -33,10 +33,11 @@
         .val-display { font-size: 1.2rem; font-weight: bold; min-width: 30px; text-align: center; font-family: 'Courier New', monospace; color: #ddd; }
         .text-val { min-width: 100px; }
         
-        .name-input { background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px 15px; color: #fff; font-size: 1.2rem; border-radius: 4px; text-align: center; font-weight: bold; width: 150px; font-family: inherit; outline: none; transition: border-color 0.2s; margin-bottom: 10px; }
+        /* Name Input */
+        .name-input { background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px 15px; color: #fff; font-size: 1.2rem; border-radius: 4px; text-align: center; font-weight: bold; width: 180px; font-family: inherit; outline: none; transition: border-color 0.2s; margin-bottom: 10px; }
         .name-input:focus { border-color: #ff3333; }
         
-        /* Toggle Switch */
+        /* Toggle Switch Style for Role */
         .role-toggle { display: flex; background: rgba(0,0,0,0.5); border-radius: 4px; overflow: hidden; border: 1px solid #333; cursor: pointer; }
         .role-opt { padding: 10px 20px; font-weight: bold; font-size: 1rem; color: #555; transition: 0.2s; }
         .role-opt.active { background: #ff3333; color: #000; text-shadow: 0 0 5px rgba(255,255,255,0.5); }
@@ -44,11 +45,14 @@
         button { background: #ff3333; color: #000; border: none; padding: 15px 60px; font-size: 1.2rem; font-weight: 900; cursor: pointer; margin: 10px; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 51, 0.4); text-transform: uppercase; letter-spacing: 2px; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); }
         button:hover { background: #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); transform: translateY(-2px); }
         button:active { transform: scale(0.98); }
+        button:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
         button.secondary { background: #333; color: #888; box-shadow: none; border: 1px solid #444; }
         button.secondary:hover { background: #444; color: #fff; border-color: #fff; }
         
+        /* Pause & Score Menu */
         #pause-menu, #score-screen { background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 600; }
         
+        /* Score Table */
         #score-table { width: 80%; max-width: 800px; border-collapse: collapse; margin-bottom: 30px; color: #fff; font-family: 'Courier New', monospace; }
         #score-table th { text-align: left; border-bottom: 2px solid #ff3333; padding: 15px; color: #ff3333; font-size: 1.2rem; text-transform: uppercase; }
         #score-table td { padding: 15px; border-bottom: 1px solid #333; font-size: 1.1rem; }
@@ -57,8 +61,10 @@
         .badge-seeker { background: #ff3333; color: #000; }
         .badge-hider { background: #4ade80; color: #000; }
         
+        /* Score Back Button Position */
         #score-back-btn { position: absolute; bottom: 50px; right: 50px; }
         
+        /* HUD - Fixed to Top */
         #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 40px; box-sizing: border-box; display: flex; justify-content: space-between; align-items: flex-start; text-shadow: 0 2px 4px black; pointer-events: none; }
         .stat-box { background: rgba(0,0,0,0.7); padding: 10px 20px; border-left: 3px solid #ff3333; margin-left: 20px; backdrop-filter: blur(4px); transform: skewX(-15deg); }
         .stat-content { transform: skewX(15deg); }
@@ -69,12 +75,7 @@
         
         #msg-area { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 4rem; font-weight: 900; color: #fff; text-shadow: 0 0 30px rgba(255,0,0,0.8); transition: opacity 0.5s; letter-spacing: 5px; text-transform: uppercase; pointer-events: none; z-index: 50; }
         
-        #comms-feed { position: absolute; top: 150px; left: 20px; width: 350px; max-height: 300px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
-        .comm-msg { background: rgba(0,0,0,0.6); border-left: 2px solid #ff3333; color: #ddd; padding: 8px 12px; margin-top: 8px; font-size: 0.9rem; font-family: 'Courier New', monospace; animation: slideIn 0.3s ease-out; text-shadow: 1px 1px 0 #000; }
-        .comm-name { color: #fbbf24; font-weight: bold; margin-right: 5px; }
-        .comm-system { border-left-color: #3b82f6; color: #fff; font-style: italic; }
-        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-
+        /* Crosshair */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #ff3333; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px #ff3333; }
         #crosshair::after { content: ''; position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); width: 20px; height: 20px; top: -9px; left: -9px; border-radius: 50%; }
 
@@ -90,17 +91,20 @@
     </script>
 </head>
 <body>
+    <!-- Loading Screen -->
     <div id="loading-screen" class="screen" style="z-index: 500; background: #000;">
         <h1>LOADING...</h1>
         <p>Connecting to Game Services</p>
     </div>
 
+    <!-- Start Screen -->
     <div id="start-screen" class="screen hidden" style="z-index: 400; background: #000; cursor: pointer;">
         <div class="start-btn-text" style="font-size: 4rem; font-weight: 900; color: #fff; animation: pulse 2s infinite; letter-spacing: 5px;">CLICK TO START</div>
         <p style="color: #666; margin-top: 20px; letter-spacing: 2px;">ENABLE AUDIO & GRAPHICS</p>
     </div>
     <style>@keyframes pulse { 0% { transform: scale(1); opacity: 0.8; } 50% { transform: scale(1.05); opacity: 1; text-shadow: 0 0 50px rgba(255, 50, 50, 1); } 100% { transform: scale(1); opacity: 0.8; } }</style>
     
+    <!-- Main Menu -->
     <div id="main-menu" class="screen hidden">
         <h1>HIDE & SEEK 3D</h1>
         <h2>Pro Edition</h2>
@@ -149,12 +153,14 @@
         <p style="margin-top: 50px; opacity: 0.5;">WASD to Move | SHIFT to Run | SPACE to Jump | P to Pause</p>
     </div>
 
+    <!-- Pause Menu -->
     <div id="pause-menu" class="screen hidden">
         <h1>PAUSED</h1>
         <button onclick="event.stopPropagation(); togglePause()">RESUME GAME</button>
         <button class="secondary" onclick="event.stopPropagation(); quitGame()">QUIT TO MAIN MENU</button>
     </div>
 
+    <!-- Score Screen -->
     <div id="score-screen" class="screen hidden">
         <h1>MATCH RESULTS</h1>
         <h2 id="match-result-title" style="color: #fff; margin-top: 0;"></h2>
@@ -172,13 +178,14 @@
         <button id="score-back-btn" onclick="event.stopPropagation(); quitGame()">BACK TO MENU</button>
     </div>
 
+    <!-- Multiplayer Menu -->
     <div id="multi-menu" class="screen hidden">
         <h1>MULTIPLAYER</h1>
         <div style="display: flex; gap: 40px; align-items: flex-start;">
             <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; display:flex; flex-direction:column; align-items:center;">
                 <h3>Create Room</h3>
                 <input type="text" id="room-name-input" class="name-input" placeholder="Room Name" onclick="event.stopPropagation()">
-                <button onclick="event.stopPropagation(); createRoom()">HOST NEW GAME</button>
+                <button id="host-btn" onclick="event.stopPropagation(); createRoomWrapper()">HOST NEW GAME</button>
             </div>
             <div style="background: rgba(255,255,255,0.05); padding: 20px; border-radius: 10px; display:flex; flex-direction:column; align-items:center;">
                 <h3>Join Room</h3>
@@ -189,6 +196,7 @@
         <button class="secondary" onclick="event.stopPropagation(); backToMain()" style="margin-top: 30px;">BACK</button>
     </div>
     
+    <!-- Lobby Screen -->
     <div id="lobby-screen" class="screen hidden">
         <h1>LOBBY</h1>
         <h2>Room: <span id="room-code-display" style="color: #4ade80; font-family: monospace;">...</span></h2>
@@ -197,6 +205,7 @@
         <button class="secondary" onclick="event.stopPropagation(); backToMain()">LEAVE</button>
     </div>
     
+    <!-- UI Layer -->
     <div id="ui-layer">
         <div id="hud" style="opacity: 0; transition: opacity 1s;">
             <div style="display:flex">
@@ -223,6 +232,7 @@
         <div id="msg-area" style="opacity: 0;">GAME MESSAGE</div>
     </div>
     
+    <!-- Mute Button Bottom Left -->
     <div id="audio-controls">
          <button id="mute-btn" onclick="event.stopPropagation(); toggleMute()">🔊</button>
     </div>
@@ -233,6 +243,7 @@
         <div style="font-size: 1.5rem; margin-top: 20px; color: #aaa;">Wait for hiders...</div>
     </div>
 
+    <!-- Game Script -->
     <script type="module">
         import * as THREE from 'three';
         import { PointerLockControls } from 'https://cdn.jsdelivr.net/npm/three@0.146.0/examples/jsm/controls/PointerLockControls.js';
@@ -240,6 +251,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // 1. Config (User provided)
         const firebaseConfig = {
           apiKey: "AIzaSyDrh86f3IlF6dAGTRhthWLgZYCtiwJ3xPU",
           authDomain: "hide-and-seek-3d-game.firebaseapp.com",
@@ -250,6 +262,7 @@
           measurementId: "G-KZRH7LMWX5"
         };
         
+        // 2. Initialize App
         let app, auth, db;
         let isOffline = false;
         try {
@@ -262,7 +275,9 @@
         }
 
         const appId = "hide-and-seek-pro"; 
+        const apiKey = ""; 
 
+        // --- Globals ---
         let currentUser = null;
         let currentRoomId = null;
         let isHost = false;
@@ -314,6 +329,7 @@
         const blindfold = document.getElementById('blindfold');
         const pauseMenu = document.getElementById('pause-menu');
         
+        // --- AI Class ---
         class AIPlayer {
             constructor(id, role, startPos) {
                 this.id = id; this.role = role;
@@ -447,15 +463,18 @@
             gameStats[id] = { name: id, role: role, catches: 0, survival: 0, caught: false };
         }
 
+        // --- Auth ---
         async function initAuth() {
             if (isOffline) {
                 updateMenuVisibility();
                 return;
             }
-            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                await signInWithCustomToken(auth, __initial_auth_token);
-            } else {
+            try {
                 await signInAnonymously(auth);
+            } catch (e) {
+                console.warn("Auth failed, offline mode", e);
+                isOffline = true;
+                updateMenuVisibility();
             }
         }
         initAuth();
@@ -485,6 +504,7 @@
             });
         }
 
+        // --- Three.js Setup ---
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x020205);
         scene.fog = new THREE.FogExp2(0x020205, 0.025); 
@@ -500,6 +520,7 @@
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
             
+            // Menu Cam
             camera.position.set(0, 60, 90);
             camera.lookAt(0, 0, 0);
             
@@ -625,7 +646,7 @@
             osc.type = 'triangle';
             osc.frequency.setValueAtTime(800, audioCtx.currentTime);
             osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
-            gain.gain.setValueAtTime(0.02, audioCtx.currentTime); // Volume Lowered
+            gain.gain.setValueAtTime(0.02, audioCtx.currentTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
             osc.connect(gain);
             gain.connect(audioCtx.destination);
@@ -834,8 +855,7 @@
                 myPlayerName = nameInput.value.trim();
             }
             
-            // Initialize Local Player Stats
-            Object.keys(gameStats).forEach(k => delete gameStats[k]); // Clear old
+            Object.keys(gameStats).forEach(k => delete gameStats[k]); 
             gameStats["player"] = { 
                 name: myPlayerName, 
                 role: selectedRole, 
@@ -911,8 +931,6 @@
         window.quitGame = function() {
             window.playClick();
             gameActive = false; isPaused = false;
-            
-            // Clear keepalive
             if(keepAliveInterval) clearInterval(keepAliveInterval);
 
             document.getElementById('pause-menu').classList.add('hidden');
@@ -923,7 +941,6 @@
             controls.unlock();
             camera.position.set(0, 60, 90); camera.lookAt(0, 0, 0);
             
-            // Clear Room
             if(unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
             currentRoomId = null; isHost = false;
         };
@@ -947,27 +964,23 @@
         function endGame(msg) {
             gameActive = false; controls.unlock();
             
-            // Update Survival for all remaining hiders
             const totalTime = 120;
-            // Hiders still in game survived full time
             Object.values(gameStats).forEach(stat => {
                  if(stat.role === 'hider' && !stat.caught) {
                       stat.survival = totalTime;
                  }
             });
             
-            // Show Score Screen
             document.getElementById('match-result-title').innerText = msg;
             const tbody = document.getElementById('score-body');
             tbody.innerHTML = '';
             
-            // Convert stats to array and sort (Seekers by catches, Hiders by time)
             const statsArr = Object.values(gameStats);
             statsArr.sort((a, b) => {
                 if (a.role === b.role) {
                     return a.role === 'seeker' ? b.catches - a.catches : b.survival - a.survival;
                 }
-                return a.role === 'seeker' ? -1 : 1; // Seekers first
+                return a.role === 'seeker' ? -1 : 1; 
             });
 
             statsArr.forEach(s => {
@@ -988,18 +1001,15 @@
             document.getElementById('score-screen').classList.remove('hidden');
         }
         
-        // catchHider - Called when a catch occurs
         window.catchHider = function(hiderId, catcherName) {
-            // Update Hider Stats
             if (gameStats[hiderId]) {
                 gameStats[hiderId].caught = true;
                 gameStats[hiderId].survival = 120 - timeLeft;
             }
             
-            // Update Catcher Stats
             let catcherId = null;
             if (catcherName === myPlayerName) catcherId = "player";
-            else catcherId = catcherName; // For bots id matches name
+            else catcherId = catcherName; 
             
             if (gameStats[catcherId]) {
                 gameStats[catcherId].catches++;
@@ -1019,18 +1029,6 @@
             hidersRemaining--; updateHUD();
             if (hidersRemaining <= 0) endGame("SEEKERS WIN!");
         }
-        
-        // Catch logic for when Player (Hider) is caught
-        function playerCaught(catcherId) {
-            if (gameStats["player"]) {
-                gameStats["player"].caught = true;
-                gameStats["player"].survival = 120 - timeLeft;
-            }
-            if (gameStats[catcherId]) {
-                gameStats[catcherId].catches++;
-            }
-            endGame(`${catcherId} caught YOU!`);
-        }
 
         function showMsg(text) {
             msgArea.innerText = text; msgArea.style.opacity = 1;
@@ -1044,8 +1042,6 @@
             hiderCountDisplay.innerText = hidersRemaining;
         }
 
-        // --- Multiplayer System (Full Logic) ---
-        
         function startKeepAlive() {
              if (keepAliveInterval) clearInterval(keepAliveInterval);
              keepAliveInterval = setInterval(async () => {
@@ -1057,17 +1053,21 @@
                          });
                      } catch(e) { console.warn("Keep-alive failed", e); }
                  }
-             }, 60000); // Every 60 seconds
+             }, 60000); 
         }
 
-        // 1. Create Room (With Name & Cleanup)
-        window.createRoom = async function() {
+        window.createRoomWrapper = async function() {
             window.playClick();
             const roomNameInput = document.getElementById('room-name-input');
             const roomName = roomNameInput.value.trim() || "Unnamed Room";
             
+            // Provide feedback
+            const btn = document.querySelector('#multi-menu button');
+            if(btn) btn.innerText = "Creating...";
+
             if (!currentUser && !isOffline) {
                 alert("Connecting to services... please wait.");
+                if(btn) btn.innerText = "HOST NEW GAME";
                 return;
             }
             
@@ -1075,6 +1075,7 @@
             
             if(isOffline) {
                  alert("Offline Mode: Multiplayer disabled");
+                 if(btn) btn.innerText = "HOST NEW GAME";
             } else {
                  try {
                      const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', roomId);
@@ -1090,11 +1091,12 @@
                  } catch (e) {
                      console.error(e);
                      alert("Error creating room. Check console.");
+                 } finally {
+                    if(btn) btn.innerText = "HOST NEW GAME";
                  }
             }
         };
 
-        // 2. List Rooms (With Cleanup)
         window.refreshLobbyList = async function() {
              if(isOffline) { alert("Offline Mode"); return; }
              const list = document.getElementById('lobby-list');
@@ -1125,7 +1127,6 @@
     
                     const div = document.createElement('div');
                     div.className = 'lobby-item';
-                    // Show Name and ID
                     div.innerHTML = `<span>${data.name || 'Room'} <small>(${d.id})</small></span> <small>${data.phase}</small>`;
                     div.onclick = (e) => { e.stopPropagation(); joinRoom(d.id); };
                     list.appendChild(div);
@@ -1145,9 +1146,8 @@
             document.getElementById('lobby-screen').classList.remove('hidden');
             document.getElementById('room-code-display').innerText = roomId;
             
-            startKeepAlive(); // Start heartbeat
+            startKeepAlive(); 
 
-            // Setup Listener
             if (unsubscribeRoom) unsubscribeRoom();
             const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'games', roomId, 'players');
             
@@ -1156,7 +1156,6 @@
                     if (change.type === "added") {
                         const pid = change.doc.id;
                         if (pid !== currentUser.uid) {
-                            // Add remote player mesh
                             const data = change.doc.data();
                              const geo = new THREE.CapsuleGeometry(1, 3, 4, 8);
                              const mat = new THREE.MeshStandardMaterial({ color: data.role === 'seeker' ? 0xff0000 : 0x00ff00 });
@@ -1175,13 +1174,9 @@
                 });
             });
             
-            // Add Self
             const myRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', roomId, 'players', currentUser.uid);
             setDoc(myRef, { x: 0, y: 2, z: 0, role: selectedRole, name: myPlayerName });
         }
-        
-        function setupRoomListener(roomId) { /* MP */ }
-        function startMultiplayerGame() { startGame('multi', selectedRole); }
         
         function updateNetwork() { 
             if (gameMode !== 'multi' || !currentRoomId || !currentUser) return;
@@ -1354,7 +1349,7 @@
             if (mode === 'single') {
                 startGame('single', 'hider'); 
             } else {
-                refreshLobbyList();
+                window.refreshLobbyList();
                 document.getElementById('main-menu').classList.add('hidden');
                 document.getElementById('multi-menu').classList.remove('hidden');
             }
@@ -1375,7 +1370,7 @@
         window.refreshLobbyList = refreshLobbyList;
         window.createRoom = () => {
             window.playClick();
-            createRoom();
+            hostGame();
         }
         
         init();
