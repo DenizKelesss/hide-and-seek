@@ -45,7 +45,6 @@
         button { background: #ff3333; color: #000; border: none; padding: 15px 60px; font-size: 1.2rem; font-weight: 900; cursor: pointer; margin: 10px; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 51, 0.4); text-transform: uppercase; letter-spacing: 2px; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); }
         button:hover { background: #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); transform: translateY(-2px); }
         button:active { transform: scale(0.98); }
-        button:disabled { background: #555; color: #888; cursor: not-allowed; box-shadow: none; }
         button.secondary { background: #333; color: #888; box-shadow: none; border: 1px solid #444; }
         button.secondary:hover { background: #444; color: #fff; border-color: #fff; }
         
@@ -75,6 +74,13 @@
         
         #msg-area { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 4rem; font-weight: 900; color: #fff; text-shadow: 0 0 30px rgba(255,0,0,0.8); transition: opacity 0.5s; letter-spacing: 5px; text-transform: uppercase; pointer-events: none; z-index: 50; }
         
+        /* Commentary Feed */
+        #comms-feed { position: absolute; top: 150px; left: 20px; width: 350px; max-height: 300px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; justify-content: flex-end; }
+        .comm-msg { background: rgba(0,0,0,0.6); border-left: 2px solid #ff3333; color: #ddd; padding: 8px 12px; margin-top: 8px; font-size: 0.9rem; font-family: 'Courier New', monospace; animation: slideIn 0.3s ease-out; text-shadow: 1px 1px 0 #000; }
+        .comm-name { color: #fbbf24; font-weight: bold; margin-right: 5px; }
+        .comm-system { border-left-color: #3b82f6; color: #fff; font-style: italic; }
+        @keyframes slideIn { from { transform: translateX(-20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+
         /* Crosshair */
         #crosshair { position: absolute; top: 50%; left: 50%; width: 4px; height: 4px; background: #ff3333; border-radius: 50%; transform: translate(-50%, -50%); pointer-events: none; box-shadow: 0 0 10px #ff3333; }
         #crosshair::after { content: ''; position: absolute; border: 1px solid rgba(255, 255, 255, 0.3); width: 20px; height: 20px; top: -9px; left: -9px; border-radius: 50%; }
@@ -282,6 +288,7 @@
         let currentRoomId = null;
         let isHost = false;
         let unsubscribeRoom = null;
+        let lastUpdate = 0;
         
         const players = {}; 
         let collidables = []; 
@@ -616,19 +623,20 @@
             } catch(e) { console.log("Audio error:", e); }
         }
         
-        window.setGameAudioMode = () => {
+        function setGameAudioMode() {
             if (!audioCtx) return;
             const now = audioCtx.currentTime;
             if(droneOsc1) droneOsc1.frequency.exponentialRampToValueAtTime(41, now + 2); 
             if(droneOsc2) droneOsc2.frequency.exponentialRampToValueAtTime(42, now + 2);
             if(lfoOsc) lfoOsc.frequency.exponentialRampToValueAtTime(0.5, now + 2); 
         };
+        window.setGameAudioMode = setGameAudioMode;
 
-        window.toggleMute = function() {
+        function toggleMute() {
             if(!audioCtx) initAudio();
             isMuted = !isMuted;
             const btn = document.getElementById('mute-btn');
-            window.playClick();
+            playClick();
             if (isMuted) {
                 btn.innerHTML = '🔇'; 
                 if(masterGain) masterGain.gain.setTargetAtTime(0, audioCtx.currentTime, 0.1);
@@ -638,8 +646,9 @@
                 if(masterGain) masterGain.gain.setTargetAtTime(0.2, audioCtx.currentTime, 0.1);
             }
         };
+        window.toggleMute = toggleMute;
         
-        window.playClick = function() {
+        function playClick() {
             if (!audioCtx || isMuted) return;
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -653,6 +662,7 @@
             osc.start();
             osc.stop(audioCtx.currentTime + 0.1);
         };
+        window.playClick = playClick;
 
         function clearEnvironment() {
             for(let i = scene.children.length - 1; i >= 0; i--) {
@@ -846,8 +856,8 @@
         }
 
         function startGame(mode, role = 'hider') {
-            window.playClick();
-            window.setGameAudioMode();
+            playClick();
+            setGameAudioMode();
             createEnvironment();
             
             const nameInput = document.getElementById('player-name-input');
@@ -920,16 +930,17 @@
             startTimer();
         }
         
-        window.togglePause = function() {
+        function togglePause() {
             if (!gameActive) return;
             isPaused = !isPaused;
             const pm = document.getElementById('pause-menu');
             if (isPaused) { controls.unlock(); pm.classList.remove('hidden'); } 
             else { controls.lock(); pm.classList.add('hidden'); }
         };
+        window.togglePause = togglePause;
         
-        window.quitGame = function() {
-            window.playClick();
+        function quitGame() {
+            playClick();
             gameActive = false; isPaused = false;
             if(keepAliveInterval) clearInterval(keepAliveInterval);
 
@@ -944,6 +955,7 @@
             if(unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
             currentRoomId = null; isHost = false;
         };
+        window.quitGame = quitGame;
 
         function startTimer() {
             const interval = setInterval(() => {
@@ -1055,6 +1067,11 @@
                  }
              }, 60000); 
         }
+        
+        function startMultiplayerGame() { 
+            startGame('multi', selectedRole); 
+        }
+        window.startMultiplayerGame = startMultiplayerGame;
 
         window.createRoomWrapper = async function() {
             window.playClick();
@@ -1308,8 +1325,8 @@
             renderer.render(scene, camera);
         }
         
-        window.updateConfig = (type, val) => {
-            window.playClick();
+        function updateConfig(type, val) {
+            playClick();
             if (type === 'hiders') {
                 cfgHiders += val;
                 if(cfgHiders < 1) cfgHiders = 1;
@@ -1330,9 +1347,10 @@
                 document.getElementById('cfg-map').innerText = cfgMap;
             }
         };
+        window.updateConfig = updateConfig;
         
-        window.toggleUserRole = () => {
-            window.playClick();
+        function toggleUserRole() {
+            playClick();
             if (selectedRole === 'hider') {
                 selectedRole = 'seeker';
                 document.getElementById('role-opt-hider').classList.remove('active');
@@ -1343,9 +1361,10 @@
                 document.getElementById('role-opt-hider').classList.add('active');
             }
         };
+        window.toggleUserRole = toggleUserRole;
 
-        window.selectMode = function(mode) {
-            window.playClick();
+        function selectMode(mode) {
+            playClick();
             if (mode === 'single') {
                 startGame('single', 'hider'); 
             } else {
@@ -1354,24 +1373,24 @@
                 document.getElementById('multi-menu').classList.remove('hidden');
             }
         };
+        window.selectMode = selectMode;
         
-        window.backToMain = function() {
-            window.playClick();
+        function backToMain() {
+            playClick();
             document.getElementById('multi-menu').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('score-screen').classList.add('hidden');
             document.getElementById('main-menu').classList.remove('hidden');
             if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
         };
+        window.backToMain = backToMain;
+
         window.startMultiBtn = () => {
-            window.playClick();
+            playClick();
             startMultiplayerGame();
         }
         window.refreshLobbyList = refreshLobbyList;
-        window.createRoom = () => {
-            window.playClick();
-            hostGame();
-        }
+        window.createRoomWrapper = createRoomWrapper;
         
         init();
     </script>
