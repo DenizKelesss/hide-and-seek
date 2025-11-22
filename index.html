@@ -45,8 +45,11 @@
         button { background: #ff3333; color: #000; border: none; padding: 15px 60px; font-size: 1.2rem; font-weight: 900; cursor: pointer; margin: 10px; transition: all 0.2s; box-shadow: 0 0 20px rgba(255, 51, 51, 0.4); text-transform: uppercase; letter-spacing: 2px; clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%); }
         button:hover { background: #fff; box-shadow: 0 0 40px rgba(255, 255, 255, 0.6); transform: translateY(-2px); }
         button:active { transform: scale(0.98); }
+        button:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; }
         button.secondary { background: #333; color: #888; box-shadow: none; border: 1px solid #444; }
         button.secondary:hover { background: #444; color: #fff; border-color: #fff; }
+        button.danger { background: #7f1d1d; border: 1px solid #ef4444; color: #ffcccc; }
+        button.danger:hover { background: #b91c1c; color: #fff; }
         
         /* Pause & Score Menu */
         #pause-menu, #score-screen { background: rgba(0,0,0,0.9); backdrop-filter: blur(15px); z-index: 600; }
@@ -90,6 +93,14 @@
         #lobby-list { margin-top: 20px; max-height: 200px; overflow-y: auto; width: 400px; background: rgba(0,0,0,0.5); border: 1px solid #333; padding: 10px; }
         .lobby-item { padding: 15px; border-bottom: 1px solid #222; cursor: pointer; display: flex; justify-content: space-between; transition: background 0.2s; }
         .lobby-item:hover { background: rgba(255,51,51,0.1); color: #ff3333; }
+
+        /* Lobby Players */
+        #lobby-player-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 600px; }
+        .player-card { background: rgba(255,255,255,0.1); padding: 15px; border-radius: 5px; display: flex; justify-content: space-between; align-items: center; border-left: 4px solid #444; }
+        .player-card.seeker { border-left-color: #ff3333; }
+        .player-card.hider { border-left-color: #4ade80; }
+        .player-name { font-weight: bold; font-size: 1.2rem; }
+        .player-role { font-family: monospace; text-transform: uppercase; opacity: 0.8; }
     </style>
     
     <script type="importmap">
@@ -206,9 +217,16 @@
     <div id="lobby-screen" class="screen hidden">
         <h1>LOBBY</h1>
         <h2>Room: <span id="room-code-display" style="color: #4ade80; font-family: monospace;">...</span></h2>
-        <p>Waiting for players...</p>
-        <button onclick="event.stopPropagation(); startMultiBtn()">START GAME</button>
-        <button class="secondary" onclick="event.stopPropagation(); backToMain()">LEAVE</button>
+        
+        <div id="lobby-player-list">
+            <!-- Players populated here -->
+        </div>
+        
+        <div id="lobby-controls" style="display: flex; gap: 20px;">
+             <button id="mp-start-btn" onclick="event.stopPropagation(); requestGameStart()" disabled style="opacity: 0.5;">START GAME</button>
+             <button id="mp-delete-btn" class="danger hidden" onclick="event.stopPropagation(); deleteCurrentRoom()">DELETE ROOM</button>
+             <button class="secondary" onclick="event.stopPropagation(); backToMain()">LEAVE</button>
+        </div>
     </div>
     
     <!-- UI Layer -->
@@ -257,7 +275,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, getDoc, onSnapshot, updateDoc, deleteDoc, query, getDocs, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 1. Config (User provided)
+        // CONFIG: Paste your Firebase credentials here
         const firebaseConfig = {
           apiKey: "AIzaSyDrh86f3IlF6dAGTRhthWLgZYCtiwJ3xPU",
           authDomain: "hide-and-seek-3d-game.firebaseapp.com",
@@ -268,7 +286,6 @@
           measurementId: "G-KZRH7LMWX5"
         };
         
-        // 2. Initialize App
         let app, auth, db;
         let isOffline = false;
         try {
@@ -287,7 +304,7 @@
         let currentUser = null;
         let currentRoomId = null;
         let isHost = false;
-        let unsubscribeRoom = null;
+        let unsubscribeRoom = null; // Fixed ReferenceError
         let lastUpdate = 0;
         
         const players = {}; 
@@ -336,7 +353,6 @@
         const blindfold = document.getElementById('blindfold');
         const pauseMenu = document.getElementById('pause-menu');
         
-        // --- AI Class ---
         class AIPlayer {
             constructor(id, role, startPos) {
                 this.id = id; this.role = role;
@@ -929,18 +945,18 @@
             }
             startTimer();
         }
+        window.startGame = startGame;
         
-        function togglePause() {
+        window.togglePause = function() {
             if (!gameActive) return;
             isPaused = !isPaused;
             const pm = document.getElementById('pause-menu');
             if (isPaused) { controls.unlock(); pm.classList.remove('hidden'); } 
             else { controls.lock(); pm.classList.add('hidden'); }
         };
-        window.togglePause = togglePause;
         
-        function quitGame() {
-            playClick();
+        window.quitGame = function() {
+            window.playClick();
             gameActive = false; isPaused = false;
             if(keepAliveInterval) clearInterval(keepAliveInterval);
 
@@ -955,7 +971,6 @@
             if(unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
             currentRoomId = null; isHost = false;
         };
-        window.quitGame = quitGame;
 
         function startTimer() {
             const interval = setInterval(() => {
@@ -1163,12 +1178,57 @@
             document.getElementById('lobby-screen').classList.remove('hidden');
             document.getElementById('room-code-display').innerText = roomId;
             
+            // Setup Host Controls
+            const startBtn = document.getElementById('mp-start-btn');
+            const deleteBtn = document.getElementById('mp-delete-btn');
+            
+            if(isHost) {
+                startBtn.style.display = 'block';
+                startBtn.disabled = false; // Host can force start even alone if they want
+                startBtn.style.opacity = '1';
+                deleteBtn.classList.remove('hidden');
+            } else {
+                startBtn.style.display = 'none';
+                deleteBtn.classList.add('hidden');
+            }
+            
             startKeepAlive(); 
 
             if (unsubscribeRoom) unsubscribeRoom();
+            // Listen to ROOM DOC for game start / close events
+            const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', roomId);
+            const roomSnapUnsub = onSnapshot(roomRef, (snap) => {
+                if (!snap.exists()) {
+                    alert("Room closed by host.");
+                    window.quitGame();
+                    return;
+                }
+                const data = snap.data();
+                if(data.phase === 'playing' && !gameActive) {
+                     startGame('multi', selectedRole);
+                }
+            });
+            
             const playersRef = collection(db, 'artifacts', appId, 'public', 'data', 'games', roomId, 'players');
             
-            unsubscribeRoom = onSnapshot(playersRef, (snapshot) => {
+            // Player Listener
+            const playerSnapUnsub = onSnapshot(playersRef, (snapshot) => {
+                // Update UI List
+                const list = document.getElementById('lobby-player-list');
+                list.innerHTML = '';
+                
+                snapshot.forEach(d => {
+                    const pData = d.data();
+                    const div = document.createElement('div');
+                    div.className = `player-card ${pData.role}`;
+                    div.innerHTML = `
+                        <span class="player-name">${pData.name || 'Unknown'}</span>
+                        <span class="player-role">${pData.role}</span>
+                    `;
+                    list.appendChild(div);
+                });
+            
+                // Game Sync Logic
                 snapshot.docChanges().forEach((change) => {
                     if (change.type === "added") {
                         const pid = change.doc.id;
@@ -1191,10 +1251,31 @@
                 });
             });
             
+            unsubscribeRoom = () => {
+                roomSnapUnsub();
+                playerSnapUnsub();
+            };
+            
             const myRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', roomId, 'players', currentUser.uid);
             setDoc(myRef, { x: 0, y: 2, z: 0, role: selectedRole, name: myPlayerName });
         }
         
+        window.requestGameStart = async function() {
+             if (!isHost || !currentRoomId) return;
+             // Update room status to 'playing'
+             const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', currentRoomId);
+             await updateDoc(roomRef, { phase: 'playing' });
+        };
+        
+        window.deleteCurrentRoom = async function() {
+             if (!isHost || !currentRoomId) return;
+             if(confirm("Are you sure you want to close this room?")) {
+                 const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'games', currentRoomId);
+                 await deleteDoc(roomRef);
+                 // Listener handles UI transition
+             }
+        };
+
         function updateNetwork() { 
             if (gameMode !== 'multi' || !currentRoomId || !currentUser) return;
             const now = performance.now();
@@ -1325,8 +1406,8 @@
             renderer.render(scene, camera);
         }
         
-        function updateConfig(type, val) {
-            playClick();
+        window.updateConfig = (type, val) => {
+            window.playClick();
             if (type === 'hiders') {
                 cfgHiders += val;
                 if(cfgHiders < 1) cfgHiders = 1;
@@ -1347,10 +1428,9 @@
                 document.getElementById('cfg-map').innerText = cfgMap;
             }
         };
-        window.updateConfig = updateConfig;
         
-        function toggleUserRole() {
-            playClick();
+        window.toggleUserRole = () => {
+            window.playClick();
             if (selectedRole === 'hider') {
                 selectedRole = 'seeker';
                 document.getElementById('role-opt-hider').classList.remove('active');
@@ -1361,10 +1441,9 @@
                 document.getElementById('role-opt-hider').classList.add('active');
             }
         };
-        window.toggleUserRole = toggleUserRole;
 
-        function selectMode(mode) {
-            playClick();
+        window.selectMode = function(mode) {
+            window.playClick();
             if (mode === 'single') {
                 startGame('single', 'hider'); 
             } else {
@@ -1373,20 +1452,17 @@
                 document.getElementById('multi-menu').classList.remove('hidden');
             }
         };
-        window.selectMode = selectMode;
         
-        function backToMain() {
-            playClick();
+        window.backToMain = function() {
+            window.playClick();
             document.getElementById('multi-menu').classList.add('hidden');
             document.getElementById('lobby-screen').classList.add('hidden');
             document.getElementById('score-screen').classList.add('hidden');
             document.getElementById('main-menu').classList.remove('hidden');
             if (unsubscribeRoom) { unsubscribeRoom(); unsubscribeRoom = null; }
         };
-        window.backToMain = backToMain;
-
         window.startMultiBtn = () => {
-            playClick();
+            window.playClick();
             startMultiplayerGame();
         }
         window.refreshLobbyList = refreshLobbyList;
